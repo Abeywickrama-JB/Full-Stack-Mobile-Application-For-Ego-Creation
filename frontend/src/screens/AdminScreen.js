@@ -35,6 +35,9 @@ const AdminScreen = ({ navigate, route }) => {
     // Promos
     const [promoCode, setPromoCode] = useState('');
     const [promoDiscount, setPromoDiscount] = useState('');
+    const [promoMinOrder, setPromoMinOrder] = useState('');
+    const [promoExpiry, setPromoExpiry] = useState('');
+    const [promoList, setPromoList] = useState([]);
 
     // Admin Creation
     const [adminName, setAdminName] = useState('');
@@ -66,6 +69,7 @@ const AdminScreen = ({ navigate, route }) => {
         if (tab === 'Custom Requests') fetchCustomRequests();
         if (tab === 'Reviews') fetchReviews();
         if (tab === 'Users') fetchUsers();
+        if (tab === 'Promos') fetchPromos();
     };
 
     // ─── API ────────────────────────────────────────────────────────
@@ -127,19 +131,36 @@ const AdminScreen = ({ navigate, route }) => {
     };
 
     const handleCreatePromo = async () => {
-        if (!promoCode.trim() || !promoDiscount.trim()) return Alert.alert('Info', 'Fields required');
+        if (!promoCode.trim() || !promoDiscount.trim() || !promoExpiry.trim()) {
+            return Alert.alert('Missing Info', 'Code, discount, and expiry days are required.');
+        }
         setLoading(true);
         try {
-            const expiryDate = new Date(); expiryDate.setDate(expiryDate.getDate() + 30);
+            const expiryDate = new Date();
+            expiryDate.setDate(expiryDate.getDate() + parseInt(promoExpiry, 10));
+            
             await api.post('/promos', {
                 code: promoCode.trim().toUpperCase(),
                 discountPercentage: parseInt(promoDiscount, 10),
-                minOrderAmount: 0,
+                minOrderAmount: parseInt(promoMinOrder, 10) || 0,
                 expiryDate: expiryDate.toISOString(),
             });
-            Alert.alert('✅ Promo Live', `${promoCode.toUpperCase()} is active now!`);
-            setPromoCode(''); setPromoDiscount('');
-        } catch (e) { Alert.alert('Error', 'Failed to launch code.'); } finally { setLoading(false); }
+            
+            Alert.alert('✅ Promo Created', `${promoCode.toUpperCase()} is now instantly available to users!`);
+            setPromoCode(''); setPromoDiscount(''); setPromoMinOrder(''); setPromoExpiry('');
+            fetchPromos(); // Refresh promo list
+        } catch (e) { 
+            Alert.alert('Error', e.response?.data?.message || 'Failed to create promo code.'); 
+        } finally { setLoading(false); }
+    };
+
+    const handleTogglePromo = async (promoId) => {
+        try {
+            await api.put(`/promos/${promoId}/toggle`);
+            fetchPromos(); // Refresh promo list
+        } catch (e) {
+            Alert.alert('Error', 'Failed to update promo status.');
+        }
     };
 
     const handleUpdateOrder = async (id, status) => {
@@ -273,12 +294,83 @@ const AdminScreen = ({ navigate, route }) => {
     const renderPromos = () => (
         <View style={styles.tabContent}>
             <View style={styles.glassCard}>
-                <Text style={styles.cardHeader}>🎟️ Launch a Promo Sale</Text>
-                <TextInput style={styles.input} placeholder="Code (e.g. SUMMER20)" placeholderTextColor="rgba(255,255,255,0.3)" autoCapitalize="characters" value={promoCode} onChangeText={setPromoCode} />
-                <TextInput style={styles.input} placeholder="Discount % (e.g. 20)" placeholderTextColor="rgba(255,255,255,0.3)" keyboardType="numeric" value={promoDiscount} onChangeText={setPromoDiscount} />
+                <Text style={styles.cardHeader}>🎟️ Create Promo Code</Text>
+                <Text style={styles.cardSubtext}>Create instant promo codes that users can apply immediately</Text>
+                
+                <TextInput 
+                    style={styles.input} 
+                    placeholder="Promo Code (e.g. SUMMER20)" 
+                    placeholderTextColor="rgba(255,255,255,0.3)" 
+                    autoCapitalize="characters"
+                    value={promoCode} 
+                    onChangeText={setPromoCode} 
+                />
+                
+                <View style={{ flexDirection: 'row', gap: 10 }}>
+                    <TextInput 
+                        style={[styles.input, { flex: 1 }]} 
+                        placeholder="Discount %" 
+                        placeholderTextColor="rgba(255,255,255,0.3)" 
+                        keyboardType="numeric"
+                        value={promoDiscount} 
+                        onChangeText={setPromoDiscount} 
+                    />
+                    <TextInput 
+                        style={[styles.input, { flex: 1 }]} 
+                        placeholder="Min Order $" 
+                        placeholderTextColor="rgba(255,255,255,0.3)" 
+                        keyboardType="numeric"
+                        value={promoMinOrder} 
+                        onChangeText={setPromoMinOrder} 
+                    />
+                </View>
+                
+                <TextInput 
+                    style={styles.input} 
+                    placeholder="Expiry Days (e.g. 30)" 
+                    placeholderTextColor="rgba(255,255,255,0.3)" 
+                    keyboardType="numeric"
+                    value={promoExpiry} 
+                    onChangeText={setPromoExpiry} 
+                />
+                
                 <TouchableOpacity style={[styles.actionBtn, {marginTop: 10}]} onPress={handleCreatePromo} disabled={loading}>
-                    <Text style={styles.actionBtnText}>{loading ? 'Creating...' : 'Launch Promo'}</Text>
+                    <Text style={styles.actionBtnText}>{loading ? 'Creating...' : '🚀 Create Promo Code'}</Text>
                 </TouchableOpacity>
+                
+                <Text style={styles.infoText}>
+                    💡 Promo codes will be instantly available to users after creation
+                </Text>
+            </View>
+            
+            {/* Active Promo Codes */}
+            <View style={styles.glassCard}>
+                <Text style={styles.cardHeader}>📋 Active Promo Codes</Text>
+                {promoList.length === 0 ? (
+                    <Text style={styles.emptyText}>No active promo codes</Text>
+                ) : (
+                    promoList.map(promo => (
+                        <View key={promo._id} style={styles.promoItem}>
+                            <View style={styles.promoHeader}>
+                                <Text style={styles.promoCode}>{promo.code}</Text>
+                                <View style={styles.promoBadge}>
+                                    <Text style={styles.promoBadgeText}>{promo.discountPercentage}% OFF</Text>
+                                </View>
+                            </View>
+                            <Text style={styles.promoDetails}>
+                                Min: ${promo.minOrderAmount} • Expires: {new Date(promo.expiryDate).toLocaleDateString()}
+                            </Text>
+                            <TouchableOpacity 
+                                style={styles.toggleBtn} 
+                                onPress={() => handleTogglePromo(promo._id)}
+                            >
+                                <Text style={promo.isActive ? styles.activeText : styles.inactiveText}>
+                                    {promo.isActive ? '🟢 Active' : '🔴 Inactive'}
+                                </Text>
+                            </TouchableOpacity>
+                        </View>
+                    ))
+                )}
             </View>
         </View>
     );
@@ -859,7 +951,64 @@ const styles = StyleSheet.create({
     badgePill: { backgroundColor: '#6200ee', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
     badgePillText: { color: '#fff', fontSize: 10, fontWeight: 'bold', letterSpacing: 1 },
 
-    emptyText: { color: 'rgba(255,255,255,0.4)', textAlign: 'center', padding: 30, fontSize: 14 }
+    emptyText: { color: 'rgba(255,255,255,0.4)', textAlign: 'center', padding: 30, fontSize: 14 },
+
+    // Promo Code Styles
+    cardSubtext: { color: 'rgba(255,255,255,0.6)', fontSize: 12, marginBottom: 15 },
+    infoText: { color: 'rgba(3,218,198,0.8)', fontSize: 11, marginTop: 8, fontStyle: 'italic' },
+    promoItem: { 
+        backgroundColor: 'rgba(255,255,255,0.05)', 
+        padding: 15, 
+        borderRadius: 12, 
+        marginBottom: 10,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.1)'
+    },
+    promoHeader: { 
+        flexDirection: 'row', 
+        justifyContent: 'space-between', 
+        alignItems: 'center',
+        marginBottom: 8 
+    },
+    promoCode: { 
+        color: '#fff', 
+        fontSize: 16, 
+        fontWeight: 'bold',
+        letterSpacing: 1 
+    },
+    promoBadge: { 
+        backgroundColor: '#03dac6', 
+        paddingHorizontal: 8, 
+        paddingVertical: 4, 
+        borderRadius: 8 
+    },
+    promoBadgeText: { 
+        color: '#000', 
+        fontSize: 10, 
+        fontWeight: 'bold' 
+    },
+    promoDetails: { 
+        color: 'rgba(255,255,255,0.6)', 
+        fontSize: 12, 
+        marginBottom: 8 
+    },
+    toggleBtn: { 
+        alignSelf: 'flex-start',
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 6,
+        backgroundColor: 'rgba(255,255,255,0.1)'
+    },
+    activeText: { 
+        color: '#4caf50', 
+        fontSize: 12, 
+        fontWeight: 'bold' 
+    },
+    inactiveText: { 
+        color: '#f44336', 
+        fontSize: 12, 
+        fontWeight: 'bold' 
+    }
 });
 
 export default AdminScreen;

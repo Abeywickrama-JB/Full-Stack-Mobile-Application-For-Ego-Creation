@@ -32,18 +32,88 @@ const CheckoutScreen = ({ navigate, selectedProduct, cart = [], removeFromCart, 
     const finalTotal = subtotal - discountAmount;
 
     // ─── Apply Promo ─────────────────────
-    const handleApplyPromo = async (codeOverride = null) => {
-        const codeToTry = (codeOverride || promoCode).trim().toUpperCase();
-        if (!codeToTry) return Alert.alert('Error', 'Please enter a promo code.');
+    const handleApplyPromo = async () => {
+        const code = promoCode.trim().toUpperCase();
+        if (!code) return Alert.alert('Error', 'Please enter a promo code.');
+        
+        setLoading(true);
         try {
-            const res = await api.get(`/promos/validate/${codeToTry}?subtotal=${subtotal}`);
+            const res = await api.get(`/promos/validate/${code}?subtotal=${subtotal}`);
             setDiscount(res.data.discountPercentage);
-            setAppliedCode(codeToTry);
-            Alert.alert('🎉 Applied!', `${res.data.discountPercentage}% discount is now active!`);
+            setAppliedCode(code);
+            Alert.alert('🎉 Promo Applied!', `${res.data.discountPercentage}% discount applied successfully!`);
         } catch (error) {
             const msg = error.response?.data?.message || 'Promo code is invalid or expired.';
             Alert.alert('❌ Invalid Code', msg);
+            setDiscount(0);
+            setAppliedCode('');
+        } finally {
+            setLoading(false);
         }
+    };
+
+    // Remove applied promo code
+    const handleRemovePromo = () => {
+        setDiscount(0);
+        setAppliedCode('');
+        setPromoCode('');
+        Alert.alert('Promo Removed', 'Promo code has been removed from your order.');
+    };
+
+    // ─── Phone Number Validation & Formatting ─────────────────────
+    const formatPhoneNumber = (phoneNumber) => {
+        // Remove all non-digit characters
+        const cleaned = phoneNumber.replace(/\D/g, '');
+        
+        // Format based on length and country code
+        if (cleaned.startsWith('94') && cleaned.length === 11) {
+            // Sri Lanka format: 94 + 9 digits
+            return `+94 ${cleaned.slice(2, 5)} ${cleaned.slice(5)}`;
+        } else if (cleaned.startsWith('1') && cleaned.length === 11) {
+            // US format: 1 + 10 digits
+            return `+1 (${cleaned.slice(1, 4)}) ${cleaned.slice(4, 7)}-${cleaned.slice(7)}`;
+        } else if (cleaned.startsWith('44') && cleaned.length === 11) {
+            // UK format: 44 + 10 digits
+            return `+44 ${cleaned.slice(2, 6)} ${cleaned.slice(6)}`;
+        } else if (cleaned.length === 10) {
+            // Local 10-digit format
+            return `${cleaned.slice(0, 3)}-${cleaned.slice(3, 6)}-${cleaned.slice(6)}`;
+        }
+        
+        // Return as-is if no specific format matches
+        return phoneNumber;
+    };
+
+    const validatePhoneNumber = (phoneNumber) => {
+        // Remove all non-digit characters
+        const cleaned = phoneNumber.replace(/\D/g, '');
+        
+        // Check if it's a valid phone number (10-15 digits)
+        if (cleaned.length < 10 || cleaned.length > 15) {
+            return false;
+        }
+        
+        // Check if it starts with valid country code or local format
+        const validPatterns = [
+            /^\d{10}$/, // 10-digit local numbers
+            /^\d{11}$/, // 11-digit numbers with country code
+            /^\d{12}$/, // 12-digit numbers
+            /^\d{13}$/, // 13-digit numbers
+            /^\d{14}$/, // 14-digit numbers
+            /^\d{15}$/, // 15-digit numbers
+            /^94\d{9}$/, // Sri Lanka format (94 + 9 digits)
+            /^1\d{10}$/, // US format (1 + 10 digits)
+            /^44\d{10}$/, // UK format (44 + 10 digits)
+        ];
+        
+        return validPatterns.some(pattern => pattern.test(cleaned));
+    };
+
+    // Handle phone number input with formatting
+    const handlePhoneChange = (text) => {
+        // Allow only digits, +, and basic formatting
+        const cleaned = text.replace(/[^\d+]/g, '');
+        setPhone(cleaned);
     };
 
     // ─── Place Order ─────────────────────
@@ -57,6 +127,12 @@ const CheckoutScreen = ({ navigate, selectedProduct, cart = [], removeFromCart, 
         if (!address || !city || !phone) {
             return Alert.alert('Missing Details', 'Please fill in all delivery details.');
         }
+        
+        // Phone number validation
+        if (!validatePhoneNumber(phone)) {
+            return Alert.alert('Invalid Phone Number', 'Please enter a valid phone number (10-15 digits). Examples: 0712345678, +94712345678, or 94712345678');
+        }
+        
         if (paymentMethod === 'Card Payment' && (!cardNumber || !expiry || !cvv)) {
             return Alert.alert('Missing Details', 'Please fill in your card details.');
         }
@@ -165,8 +241,18 @@ const CheckoutScreen = ({ navigate, selectedProduct, cart = [], removeFromCart, 
                 <TextInput style={styles.inputField} placeholder="Street Address" value={address} onChangeText={setAddress} />
                 <View style={{flexDirection: 'row', gap: 10}}>
                     <TextInput style={[styles.inputField, {flex: 1}]} placeholder="City" value={city} onChangeText={setCity} />
-                    <TextInput style={[styles.inputField, {flex: 1}]} placeholder="Phone Number" keyboardType="phone-pad" value={phone} onChangeText={setPhone} />
+                    <TextInput 
+                        style={[styles.inputField, {flex: 1}, phone && !validatePhoneNumber(phone) && styles.inputError]} 
+                        placeholder="Phone Number" 
+                        keyboardType="phone-pad" 
+                        value={phone} 
+                        onChangeText={handlePhoneChange}
+                        maxLength={15}
+                    />
                 </View>
+                {phone && !validatePhoneNumber(phone) && (
+                    <Text style={styles.errorText}>Please enter a valid phone number</Text>
+                )}
             </View>
 
             {/* Promo Code */}
@@ -175,15 +261,15 @@ const CheckoutScreen = ({ navigate, selectedProduct, cart = [], removeFromCart, 
                 {appliedCode ? (
                     <View style={styles.appliedBadge}>
                         <Text style={styles.appliedText}>✅ "{appliedCode}" applied — {discount}% OFF!</Text>
-                        <TouchableOpacity onPress={() => { setDiscount(0); setAppliedCode(''); setPromoCode(''); }}>
-                            <Text style={{ color: '#999', marginTop: 4 }}>Remove</Text>
+                        <TouchableOpacity style={styles.removeBtn} onPress={handleRemovePromo}>
+                            <Text style={styles.removeBtnText}>Remove</Text>
                         </TouchableOpacity>
                     </View>
                 ) : (
                     <View style={styles.promoRow}>
                         <TextInput
                             style={styles.promoInput}
-                            placeholder="Enter code (e.g. SUMMER20)"
+                            placeholder="Enter code"
                             value={promoCode}
                             onChangeText={t => setPromoCode(t.toUpperCase())}
                             autoCapitalize="characters"
@@ -252,6 +338,9 @@ const styles = StyleSheet.create({
 
     // Inputs
     inputField: { backgroundColor: '#f9f9f9', borderWidth: 1, borderColor: '#e0e0e0', padding: 14, borderRadius: 12, marginBottom: 10, fontSize: 14 },
+    inputError: { borderColor: '#f44336', backgroundColor: '#ffebee' },
+    errorText: { color: '#f44336', fontSize: 12, marginTop: 4 },
+    helperText: { color: '#666', fontSize: 11, marginTop: 4, fontStyle: 'italic' },
 
     // Items
     itemRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 14, paddingBottom: 14, borderBottomWidth: 1, borderBottomColor: '#f0f0f0' },
@@ -273,9 +362,11 @@ const styles = StyleSheet.create({
     // Promo
     appliedBadge: { backgroundColor: '#e8f5e9', padding: 14, borderRadius: 10, alignItems: 'center' },
     appliedText: { color: '#2e7d32', fontWeight: 'bold', fontSize: 14 },
-    promoRow: { flexDirection: 'row' },
+    removeBtn: { backgroundColor: '#fff', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 6, borderWidth: 1, borderColor: '#e8f5e9', marginTop: 8 },
+    removeBtnText: { color: '#2e7d32', fontWeight: 'bold', fontSize: 12 },
+    promoRow: { flexDirection: 'row', alignItems: 'center' },
     promoInput: { flex: 1, backgroundColor: '#f5f5f5', padding: 13, borderRadius: 10, borderWidth: 1, borderColor: '#e0e0e0', fontSize: 15, letterSpacing: 1 },
-    applyBtn: { backgroundColor: '#6200ee', paddingHorizontal: 18, justifyContent: 'center', borderRadius: 10, marginLeft: 10 },
+    applyBtn: { backgroundColor: '#6200ee', paddingHorizontal: 18, justifyContent: 'center', borderRadius: 10, marginLeft: 10, height: 48 },
     applyBtnText: { color: '#fff', fontWeight: 'bold' },
 
     // Payment Options 

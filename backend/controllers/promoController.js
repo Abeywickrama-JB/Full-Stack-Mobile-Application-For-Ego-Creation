@@ -28,7 +28,12 @@ exports.validatePromo = async (req, res) => {
             });
         }
 
-        res.json(promo);
+        // Return success with discount info
+        res.json({ 
+            valid: true,
+            discountPercentage: promo.discountPercentage,
+            message: `Promo code applied! ${promo.discountPercentage}% discount`
+        });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
