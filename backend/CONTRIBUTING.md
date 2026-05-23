@@ -40,3 +40,27 @@ app.use('/api/products', require('./routes/productRoutes'));
 ### Member 6 Special Task: Media & Hosting
 1.  **Media**: Install `multer`. Create a route that accepts images and returns the URL.
 2.  **Hosting**: Create a free account on **Render** or **Railway**. Link your GitHub repository and set the `MONGO_URI` environment variable from MongoDB Atlas.
+
+
+
+
+
+
+## 📺 Project Walkthrough & Demo Video
+
+Click on the image below to watch the full application demonstration video on Google Drive:
+
+[![Watch the Demo Video](https://github.com/user-attachments/assets/9be6bbc2-ca43-4036-9e5b-7e350a4f8e42)](https://drive.google.com/file/d/1n2_J4hzMziMr-ePGwrZn-3mA60hmCQ1g/view?usp=drive_link)
+
+
+
+
+
+
+
+
+
+
+
+
+
