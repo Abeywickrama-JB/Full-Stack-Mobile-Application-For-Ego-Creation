@@ -95,6 +95,57 @@ exports.rejectCustomization = async (req, res) => {
     }
 };
 
+// User response to admin decisions
+exports.userRespondToCustomization = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { response } = req.body; // 'Accept' or 'Reject'
+        
+        const customization = await Customization.findById(id);
+        if (!customization) {
+            return res.status(404).json({ message: 'Customization not found' });
+        }
+        
+        // Check if customization belongs to user
+        if (customization.user.toString() !== req.user.id) {
+            return res.status(403).json({ message: 'Not authorized to respond to this customization' });
+        }
+        
+        if (response === 'Accept') {
+            customization.status = 'Approved';
+            // Create order from accepted customization
+            const Order = require('../models/Order');
+            const order = new Order({
+                user: req.user.id,
+                products: [{
+                    product: customization.productId || '507f1f77bcf86cd799439011', // Fallback product ID
+                    quantity: 1
+                }],
+                totalAmount: customization.adjustedPrice || 100,
+                paymentMethod: 'Cash on Delivery',
+                customization: customization._id,
+                deliveryDetails: {
+                    address: 'User Address',
+                    city: 'User City',
+                    phone: '0000000000'
+                }
+            });
+            await order.save();
+            
+            customization.order = order._id;
+        } else if (response === 'Reject') {
+            customization.status = 'Rejected';
+        } else {
+            return res.status(400).json({ message: 'Invalid response. Must be "Accept" or "Reject"' });
+        }
+        
+        await customization.save();
+        res.json({ message: `Customization ${response}ed`, customization });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
 exports.requestPriceUpdate = async (req, res) => {
     try {
         const { id } = req.params;

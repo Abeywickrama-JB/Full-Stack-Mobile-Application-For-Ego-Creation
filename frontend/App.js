@@ -18,6 +18,7 @@ import MediaScreen from './src/screens/MediaScreen';
 import MediaGalleryScreen from './src/screens/MediaGalleryScreen';
 import CheckoutScreen from './src/screens/CheckoutScreen';
 import AdminScreen from './src/screens/AdminScreen';
+import MyCustomizationsScreen from './src/screens/MyCustomizationsScreen';
 
 export default function App() {
   const [currentScreen, setCurrentScreen] = useState('Login');
@@ -60,6 +61,7 @@ export default function App() {
       case 'Media': return <MediaScreen navigate={navigate} route={route} />;
       case 'MediaGallery': return <MediaGalleryScreen navigate={navigate} route={route} />;
       case 'Admin': return <AdminScreen navigate={navigate} route={route} />;
+      case 'MyCustomizations': return <MyCustomizationsScreen navigate={navigate} route={route} />;
       default: return <LoginScreen navigate={navigate} route={route} />;
     }
   };

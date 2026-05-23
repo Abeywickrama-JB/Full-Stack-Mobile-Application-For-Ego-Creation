@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ScrollView, Image, ActivityIndicator } from 'react-native';
 import api from '../services/api';
 
-const BASE_URL = 'http://10.73.229.142:3000';
+const BASE_URL = 'http://10.86.169.142:3000';
 
 const CheckoutScreen = ({ navigate, selectedProduct, cart = [], removeFromCart, clearCart }) => {
     const [promoCode, setPromoCode] = useState('');
@@ -150,12 +150,17 @@ const CheckoutScreen = ({ navigate, selectedProduct, cart = [], removeFromCart, 
                 quantity: 1
             }));
 
-            await api.post('/orders', {
+            const orderData = {
                 products,
                 totalAmount: finalTotal,
                 paymentMethod,
                 deliveryDetails: { address, city, phone }
-            });
+            };
+
+            console.log('📦 Placing order with data:', orderData);
+            
+            const response = await api.post('/orders', orderData);
+            console.log('✅ Order created:', response.data);
 
             if (clearCart) clearCart();
 
@@ -168,7 +173,17 @@ const CheckoutScreen = ({ navigate, selectedProduct, cart = [], removeFromCart, 
                 ]
             );
         } catch (error) {
-            Alert.alert('❌ Checkout Failed', error.response?.data?.message || 'Please try again.');
+            console.error('❌ Order placement error:', error);
+            console.error('Error response:', error.response?.data);
+            
+            let errorMessage = 'Please try again.';
+            if (error.response?.data?.message) {
+                errorMessage = error.response.data.message;
+            } else if (error.message) {
+                errorMessage = error.message;
+            }
+            
+            Alert.alert('❌ Checkout Failed', errorMessage);
         } finally {
             setLoading(false);
         }

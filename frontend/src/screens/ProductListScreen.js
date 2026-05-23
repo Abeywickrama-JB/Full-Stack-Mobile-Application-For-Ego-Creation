@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, FlatList, StyleSheet, ActivityIndicator, TouchableOpacity, Image, SafeAreaView, StatusBar, TextInput } from 'react-native';
 import api from '../services/api';
 
-const BASE_URL = 'http://10.73.229.142:3000';
+const BASE_URL = 'http://10.86.169.142:3000';
 
 const CATEGORIES = ['All', 'Flowers', 'Chocolates', 'Toys', 'Stationary', 'Decor', 'Home', 'Gifts', 'Birthday', 'Kitchen'];
 

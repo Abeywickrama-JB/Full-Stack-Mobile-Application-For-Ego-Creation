@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { Alert } from 'react-native';
 
-const BASE_URL = 'http://10.73.229.142:3000/api'; // Your PC's IP address
+const BASE_URL = 'http://10.86.169.142:3000/api'; // Local development
 
 const api = axios.create({
     baseURL: BASE_URL,

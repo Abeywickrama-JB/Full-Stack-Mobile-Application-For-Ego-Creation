@@ -16,4 +16,7 @@ router.put('/admin/:id/approve', adminAuth, controller.approveCustomization);
 router.put('/admin/:id/reject', adminAuth, controller.rejectCustomization);
 router.put('/admin/:id/price-update', adminAuth, controller.requestPriceUpdate);
 
+// User response routes
+router.put('/:id/respond', auth, controller.userRespondToCustomization);
+
 module.exports = router;

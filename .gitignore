@@ -1,0 +1,38 @@
+# ========================
+# Node.js / Backend
+# ========================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.env
+.env.local
+.env.production
+
+# ========================
+# Uploaded files (binary)
+# ========================
+backend/uploads/*
+!backend/uploads/.gitkeep
+
+# ========================
+# Frontend / Expo
+# ========================
+frontend/node_modules/
+frontend/.expo/
+frontend/dist/
+frontend/web-build/
+frontend/.expo-shared/
+
+# ========================
+# OS / Editor
+# ========================
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# ========================
+# Test files
+# ========================
+backend/test*.js

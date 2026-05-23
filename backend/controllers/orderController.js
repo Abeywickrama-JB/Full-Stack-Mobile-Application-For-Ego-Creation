@@ -2,7 +2,7 @@ const Order = require('../models/Order');
 
 exports.createOrder = async (req, res) => {
     try {
-        const { products, totalAmount, paymentMethod, customizationId } = req.body;
+        const { products, totalAmount, paymentMethod, customizationId, deliveryDetails } = req.body;
         
         // Convert product IDs to proper ObjectId format if they're valid 24-char hex strings
         const processedProducts = products.map(item => ({
@@ -15,7 +15,12 @@ exports.createOrder = async (req, res) => {
             products: processedProducts,
             totalAmount,
             paymentMethod,
-            customization: customizationId
+            customization: customizationId,
+            deliveryDetails: deliveryDetails || {
+                address: 'Default Address',
+                city: 'Default City',
+                phone: '0000000000'
+            }
         });
         await order.save();
 

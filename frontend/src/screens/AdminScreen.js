@@ -6,7 +6,7 @@ import {
 import * as ImagePicker from 'expo-image-picker';
 import api from '../services/api';
 
-const BASE_URL = 'http://10.73.229.142:3000';
+const BASE_URL = 'http://10.86.169.142:3000';
 
 const AdminScreen = ({ navigate, route }) => {
     // Determine initial tab from route params (if navigated from HomeScreen portals)
@@ -44,6 +44,14 @@ const AdminScreen = ({ navigate, route }) => {
     const [adminEmail, setAdminEmail] = useState('');
     const [adminPassword, setAdminPassword] = useState('');
 
+    // Product Edit
+    const [editingProduct, setEditingProduct] = useState(null);
+    const [editProdName, setEditProdName] = useState('');
+    const [editProdPrice, setEditProdPrice] = useState('');
+    const [editProdStock, setEditProdStock] = useState('');
+    const [editProdDesc, setEditProdDesc] = useState('');
+
+    
     const TABS = [
         { id: 'Products', icon: '📦', label: 'Products' },
         { id: 'Orders', icon: '🚚', label: 'Orders' },
@@ -103,7 +111,12 @@ const AdminScreen = ({ navigate, route }) => {
         try { const res = await api.get('/custom-requests/admin/all'); setCustomRequests(res.data || []); }
         catch (e) {} finally { setLoading(false); }
     };
-
+    const fetchPromos = async () => {
+        setLoading(true);
+        try { const res = await api.get('/promos'); setPromoList(res.data || []); }
+        catch (e) {} finally { setLoading(false); }
+    };
+    
     const handleAddProduct = async () => {
         if (!prodName.trim() || !prodPrice.trim() || !prodStock.trim()) {
             return Alert.alert('Missing Info', 'Details required.');
@@ -194,6 +207,81 @@ const AdminScreen = ({ navigate, route }) => {
         if (!res.canceled) setProdImage(res.assets[0].uri);
     };
 
+    // Product Edit Functions
+    const handleEditProduct = (product) => {
+        setEditingProduct(product);
+        setEditProdName(product.name);
+        setEditProdPrice(product.price?.toString() || '');
+        setEditProdStock(product.stock?.toString() || '');
+        setEditProdDesc(product.description || '');
+        setSubTab('Edit');
+    };
+
+    const handleUpdateProduct = async () => {
+        if (!editProdName.trim() || !editProdPrice || !editProdStock) {
+            return Alert.alert('Missing Info', 'Please fill all required fields');
+        }
+        setLoading(true);
+        try {
+            const updateData = {
+                name: editProdName.trim(),
+                price: parseFloat(editProdPrice),
+                stock: parseInt(editProdStock),
+                description: editProdDesc.trim()
+            };
+            
+            await api.put(`/products/${editingProduct._id}`, updateData);
+            Alert.alert('✅ Product Updated!', `${editProdName} has been updated successfully.`);
+            
+            // Reset edit form
+            setEditingProduct(null);
+            setEditProdName('');
+            setEditProdPrice('');
+            setEditProdStock('');
+            setEditProdDesc('');
+            setSubTab('Current');
+            
+            // Refresh product list
+            fetchProducts();
+        } catch (error) {
+            Alert.alert('Error', 'Failed to update product');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleDeleteProduct = (product) => {
+        Alert.alert(
+            'Delete Product',
+            `Are you sure you want to delete "${product.name}"? This action cannot be undone.`,
+            [
+                { text: 'Cancel', style: 'cancel' },
+                { 
+                    text: 'Delete', 
+                    style: 'destructive',
+                    onPress: async () => {
+                        try {
+                            await api.delete(`/products/${product._id}`);
+                            Alert.alert('✅ Product Deleted', `${product.name} has been deleted.`);
+                            fetchProducts();
+                        } catch (error) {
+                            Alert.alert('Error', 'Failed to delete product');
+                        }
+                    }
+                }
+            ]
+        );
+    };
+
+    const handleCancelEdit = () => {
+        setEditingProduct(null);
+        setEditProdName('');
+        setEditProdPrice('');
+        setEditProdStock('');
+        setEditProdDesc('');
+        setSubTab('Current');
+    };
+
     // ─── Renders ──────────────────────────────────────────────────
     const renderProducts = () => (
         <View style={{ flex: 1 }}>
@@ -205,6 +293,11 @@ const AdminScreen = ({ navigate, route }) => {
                 <TouchableOpacity style={[styles.subTab, subTab === 'Current' && styles.subTabActive]} onPress={() => setSubTab('Current')}>
                     <Text style={[styles.subTabText, subTab === 'Current' && styles.subTabTextActive]}>📋 Current Items ({productList.length})</Text>
                 </TouchableOpacity>
+                {editingProduct && (
+                    <TouchableOpacity style={[styles.subTab, subTab === 'Edit' && styles.subTabActive]} onPress={() => setSubTab('Edit')}>
+                        <Text style={[styles.subTabText, subTab === 'Edit' && styles.subTabTextActive]}>✏️ Edit Item</Text>
+                    </TouchableOpacity>
+                )}
             </View>
 
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.tabContent}>
@@ -226,6 +319,25 @@ const AdminScreen = ({ navigate, route }) => {
                             <Text style={styles.actionBtnText}>{loading ? 'Processing...' : 'Add Product'}</Text>
                         </TouchableOpacity>
                     </View>
+                ) : subTab === 'Edit' ? (
+                    <View style={styles.glassCard}>
+                        <Text style={styles.cardHeader}>Edit Product</Text>
+                        <TextInput style={styles.input} placeholder="Product Name *" placeholderTextColor="rgba(255,255,255,0.3)" value={editProdName} onChangeText={setEditProdName} />
+                        <View style={{ flexDirection: 'row', gap: 10 }}>
+                            <TextInput style={[styles.input, { flex: 1 }]} placeholder="Price ($) *" placeholderTextColor="rgba(255,255,255,0.3)" keyboardType="numeric" value={editProdPrice} onChangeText={setEditProdPrice} />
+                            <TextInput style={[styles.input, { flex: 1 }]} placeholder="Stock *" placeholderTextColor="rgba(255,255,255,0.3)" keyboardType="numeric" value={editProdStock} onChangeText={setEditProdStock} />
+                        </View>
+                        <TextInput style={[styles.input, { height: 80, textAlignVertical: 'top' }]} placeholder="Description" placeholderTextColor="rgba(255,255,255,0.3)" multiline value={editProdDesc} onChangeText={setEditProdDesc} />
+                        
+                        <View style={{ flexDirection: 'row', gap: 10 }}>
+                            <TouchableOpacity style={[styles.actionBtn, { flex: 1, backgroundColor: '#10b981' }]} onPress={handleUpdateProduct} disabled={loading}>
+                                <Text style={styles.actionBtnText}>{loading ? 'Processing...' : 'Update Product'}</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity style={[styles.actionBtn, { flex: 1, backgroundColor: '#ef4444' }]} onPress={handleCancelEdit}>
+                                <Text style={styles.actionBtnText}>Cancel</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
                 ) : (
                     <View style={styles.glassCardList}>
                         {productList.length === 0 ? <Text style={styles.emptyText}>No items found.</Text> :
@@ -235,6 +347,14 @@ const AdminScreen = ({ navigate, route }) => {
                                     <View style={{ flex: 1, marginLeft: 12 }}>
                                         <Text style={styles.rowTitle}>{p.name}</Text>
                                         <Text style={styles.rowSub}>${p.price?.toFixed(2)}  ·  Stock: {p.stock}</Text>
+                                    </View>
+                                    <View style={{ flexDirection: 'row', gap: 8 }}>
+                                        <TouchableOpacity style={[styles.editBtn]} onPress={() => handleEditProduct(p)}>
+                                            <Text style={styles.editBtnText}>✏️</Text>
+                                        </TouchableOpacity>
+                                        <TouchableOpacity style={[styles.deleteBtn]} onPress={() => handleDeleteProduct(p)}>
+                                            <Text style={styles.deleteBtnText}>🗑️</Text>
+                                        </TouchableOpacity>
                                     </View>
                                 </View>
                             ))
@@ -1008,7 +1128,36 @@ const styles = StyleSheet.create({
         color: '#f44336', 
         fontSize: 12, 
         fontWeight: 'bold' 
-    }
-});
+    },
+
+    // Edit/Delete Button Styles
+    editBtn: { 
+        backgroundColor: '#3b82f6', 
+        padding: 8, 
+        borderRadius: 8, 
+        alignItems: 'center',
+        justifyContent: 'center',
+        minWidth: 40,
+        height: 40
+    },
+    editBtnText: { 
+        color: '#fff', 
+        fontSize: 16 
+    },
+    deleteBtn: { 
+        backgroundColor: '#ef4444', 
+        padding: 8, 
+        borderRadius: 8, 
+        alignItems: 'center',
+        justifyContent: 'center',
+        minWidth: 40,
+        height: 40
+    },
+    deleteBtnText: { 
+        color: '#fff', 
+        fontSize: 16 
+    },
+
+    });
 
 export default AdminScreen;

@@ -21,37 +21,25 @@ const orderSchema = new mongoose.Schema({
     paymentMethod: { type: String, required: true, default: 'Cash on Delivery' },
     status: { type: String, enum: ['Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled'], default: 'Pending' },
     deliveryDetails: {
-        address: { type: String, required: true },
-        city: { type: String, required: true },
+        address: { type: String },
+        city: { type: String },
         phone: { 
-            type: String, 
-            required: true,
+            type: String,
             validate: {
                 validator: function(v) {
+                    if (!v) return true; // Optional for custom orders
                     // Remove all non-digit characters
                     const cleaned = v.replace(/\D/g, '');
                     
-                    // Check if it's a valid phone number (10-15 digits)
-                    if (cleaned.length < 10 || cleaned.length > 15) {
+                    // Check if it's a valid phone number (9-15 digits, more flexible)
+                    if (cleaned.length < 9 || cleaned.length > 15) {
                         return false;
                     }
                     
-                    // Check if it starts with valid country code or local format
-                    const validPatterns = [
-                        /^\d{10}$/, // 10-digit local numbers
-                        /^\d{11}$/, // 11-digit numbers with country code
-                        /^\d{12}$/, // 12-digit numbers
-                        /^\d{13}$/, // 13-digit numbers
-                        /^\d{14}$/, // 14-digit numbers
-                        /^\d{15}$/, // 15-digit numbers
-                        /^94\d{9}$/, // Sri Lanka format (94 + 9 digits)
-                        /^1\d{10}$/, // US format (1 + 10 digits)
-                        /^44\d{10}$/, // UK format (44 + 10 digits)
-                    ];
-                    
-                    return validPatterns.some(pattern => pattern.test(cleaned));
+                    // Simply check if it contains only digits and reasonable length
+                    return /^\d+$/.test(cleaned);
                 },
-                message: 'Please enter a valid phone number (10-15 digits)'
+                message: 'Please enter a valid phone number (9-15 digits)'
             }
         }
     }

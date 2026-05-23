@@ -8,8 +8,9 @@ const HomeScreen = ({ navigate }) => {
     const userModules = [
         { id: '1', name: 'Shop Collection', icon: '🛍️', screen: 'Products', gradient: ['#1a237e', '#3949ab'], sub: 'Curated Gifts' },
         { id: '2', name: 'My Orders', icon: '📦', screen: 'Orders', gradient: ['#004d40', '#00796b'], sub: 'Track Deliveries' },
-        { id: '3', name: 'My Custom Requests', icon: '🎨', screen: 'CustomerCustomRequests', gradient: ['#ff6b6b', '#ee5a24'], sub: 'Track Custom Items' },
-        { id: '4', name: 'Personalize', icon: '✨', screen: 'CustomRequest', gradient: ['#4a148c', '#7b1fa2'], sub: 'Make it Yours' },
+        { id: '3', name: 'My Customizations', icon: '🎨', screen: 'MyCustomizations', gradient: ['#ff6b6b', '#ee5a24'], sub: 'View & Respond' },
+        { id: '4', name: 'Custom Requests', icon: '💡', screen: 'CustomerCustomRequests', gradient: ['#4a148c', '#7b1fa2'], sub: 'Track Quotes' },
+        { id: '5', name: 'Personalize', icon: '✨', screen: 'CustomRequest', gradient: ['#6a1b9a', '#8e24aa'], sub: 'Make it Yours' },
         { id: '5', name: 'Promo Bar', icon: '🎟️', screen: 'Promos', gradient: ['#e65100', '#f57c00'], sub: 'Exclusive Codes' },
         { id: '6', name: 'Reviews', icon: '⭐', screen: 'Reviews', gradient: ['#f57f17', '#fbc02d'], sub: 'Community' },
         { id: '7', name: 'Media Gallery', icon: '📸', screen: 'MediaGallery', gradient: ['#006064', '#0097a7'], sub: 'Organized Photos' },
